@@ -1,207 +1,162 @@
 import 'package:flutter/material.dart';
+import 'package:math_expressions/math_expressions.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Simple Calculator',
-      theme: ThemeData(useMaterial3: true),
-      home: const CalculatorPage(),
-    );
-  }
-}
+void main() => runApp(
+  const MaterialApp(debugShowCheckedModeBanner: false, home: CalculatorPage()),
+);
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage({super.key});
-
   @override
   State<CalculatorPage> createState() => _CalculatorPageState();
 }
 
 class _CalculatorPageState extends State<CalculatorPage> {
   String input = "";
-  String hasil = "0";
+  String hasil = "";
+  List<String> riwayat = [];
 
   void tekanTombol(String value) {
     setState(() {
-      input += value;
-    });
-  }
-
-  void clear() {
-    setState(() {
-      input = "";
-      hasil = "0";
+      // Input dibatasi hingga 10 digit agar tetap dalam rentang miliaran
+      if (input.length < 10 || "+-*/()".contains(value)) {
+        input += value;
+      }
     });
   }
 
   void hitung() {
     try {
+      // Mengganti simbol agar dipahami parser
       String ekspresi = input.replaceAll('×', '*').replaceAll('÷', '/');
 
-      List<String> angka = [];
-      List<String> operator = [];
-
-      String temp = "";
-
-      for (int i = 0; i < ekspresi.length; i++) {
-        String c = ekspresi[i];
-
-        if ("+-*/".contains(c)) {
-          angka.add(temp);
-          operator.add(c);
-          temp = "";
-        } else {
-          temp += c;
-        }
-      }
-
-      angka.add(temp);
-
-      double hasilAkhir = double.parse(angka[0]);
-
-      for (int i = 0; i < operator.length; i++) {
-        double nilai = double.parse(angka[i + 1]);
-
-        switch (operator[i]) {
-          case "+":
-            hasilAkhir += nilai;
-            break;
-          case "-":
-            hasilAkhir -= nilai;
-            break;
-          case "*":
-            hasilAkhir *= nilai;
-            break;
-          case "/":
-            hasilAkhir /= nilai;
-            break;
-        }
-      }
+      Parser p = Parser();
+      Expression exp = p.parse(ekspresi);
+      ContextModel cm = ContextModel();
+      double eval = exp.evaluate(EvaluationType.REAL, cm);
 
       setState(() {
-        hasil = hasilAkhir % 1 == 0
-            ? hasilAkhir.toInt().toString()
-            : hasilAkhir.toStringAsFixed(2);
+        // Format desimal: 5 angka di belakang, hapus nol berlebih, ubah . jadi ,
+        String res = eval.toStringAsFixed(5);
+        res = res.replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "");
+        res = res.replaceAll('.', ',');
+
+        hasil = res;
+        riwayat.insert(0, "$input = $res");
+        if (riwayat.length > 5) riwayat.removeLast();
       });
     } catch (e) {
-      setState(() {
-        hasil = "Error";
-      });
+      setState(() => hasil = "Error");
     }
-  }
-
-  Widget tombol(String text, {Color color = Colors.blueAccent}) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: ElevatedButton(
-          onPressed: () {
-            if (text == "=") {
-              hitung();
-            } else if (text == "C") {
-              clear();
-            } else {
-              tekanTombol(text);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(70, 70),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget baris(List<Widget> children) {
-    return Row(children: children);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Simple Calculator"),
-        centerTitle: true,
-        backgroundColor: const Color.fromARGB(255, 14, 15, 80),
-        foregroundColor: Colors.white,
+        title: const Text("Kalkulator", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.blueAccent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    input.isEmpty ? "0" : input,
-                    style: const TextStyle(fontSize: 28),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    hasil,
-                    style: const TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ],
+      body: Column(
+        children: [
+          // Area Riwayat
+          Expanded(
+            child: ListView.builder(
+              reverse: true,
+              itemCount: riwayat.length,
+              itemBuilder: (context, i) => ListTile(
+                title: Text(
+                  riwayat[i],
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  textAlign: TextAlign.right,
+                ),
               ),
             ),
+          ),
+          // Area Tampilan Input & Hasil
+          Container(
+            padding: const EdgeInsets.all(20),
+            alignment: Alignment.bottomRight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(input, style: const TextStyle(fontSize: 28)),
+                const SizedBox(height: 10),
+                Text(
+                  hasil.isEmpty ? "" : "= $hasil",
+                  style: const TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildKeypad(),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
+  Widget _buildKeypad() {
+    return Column(
+      children: [
+        rowTombol(
+          ["(", ")", "⌫", "C"],
+          [Colors.blue, Colors.blue, Colors.red, Colors.red],
+        ),
+        rowTombol(["7", "8", "9", "÷"], [null, null, null, Colors.blue]),
+        rowTombol(["4", "5", "6", "×"], [null, null, null, Colors.blue]),
+        rowTombol(["1", "2", "3", "-"], [null, null, null, Colors.blue]),
+        rowTombol(
+          ["0", ".", "=", "+"],
+          [null, null, Colors.orange, Colors.blue],
+        ),
+      ],
+    );
+  }
 
-            baris([
-              tombol("7"),
-              tombol("8"),
-              tombol("9"),
-              tombol("÷", color: Colors.orange),
-            ]),
-            baris([
-              tombol("4"),
-              tombol("5"),
-              tombol("6"),
-              tombol("×", color: Colors.orange),
-            ]),
-            baris([
-              tombol("1"),
-              tombol("2"),
-              tombol("3"),
-              tombol("-", color: Colors.orange),
-            ]),
-            baris([
-              tombol("0"),
-              tombol("."),
-              tombol("=", color: Colors.green),
-              tombol("+", color: Colors.orange),
-            ]),
-            baris([tombol("C", color: Colors.red)]),
-          ],
+  Widget rowTombol(List<String> teks, List<Color?> warna) {
+    return Row(
+      children: List.generate(teks.length, (i) => tombol(teks[i], warna[i])),
+    );
+  }
+
+  Widget tombol(String text, Color? color) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color ?? const Color(0xFFEEEEEE),
+            foregroundColor: color == null ? Colors.black : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: () {
+            if (text == "=")
+              hitung();
+            else if (text == "C")
+              setState(() {
+                input = "";
+                hasil = "";
+              });
+            else if (text == "⌫")
+              setState(() {
+                if (input.isNotEmpty)
+                  input = input.substring(0, input.length - 1);
+              });
+            else
+              tekanTombol(text);
+          },
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
