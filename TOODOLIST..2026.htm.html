@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Daftar Tugas Modern</title>
+    <style>
+        /* === GAYA CSS === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #4a90e2;
+        }
+
+        .upload-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .custom-upload {
+            flex: 1;
+            border: 2px dashed #cbd5e1;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            font-size: 14px;
+            color: #64748b;
+            transition: all 0.3s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 250px;
+        }
+
+        .custom-upload:hover {
+            border-color: #4a90e2;
+            background: #f0f7ff;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button.btn-tambah {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button.btn-tambah:hover {
+            background-color: #357abd;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid #4a90e2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .tugas-konten {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 70%;
+        }
+
+        .tugas-teks {
+            color: #334155;
+            font-size: 16px;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .lampiran-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lampiran-teks {
+            color: #64748b;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .btn-lihat {
+            color: #4a90e2;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-lihat:hover {
+            text-decoration: underline;
+        }
+
+        .aksi-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        button.btn-hapus {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button.btn-hapus:hover {
+            background-color: #cc0000;
+        }
+
+        .kosong-teks {
+            text-align: center;
+            color: #a0aec0;
+            font-style: italic;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- === STRUKTUR HTML === -->
+    <div class="container">
+        <h2>📝 Daftar Tugas &amp; Lampiran</h2>
+        
+        <div class="input-section">
+            <input type="text" id="inputTugas" placeholder="Ketik nama tugas baru...">
+            
+            <div class="upload-wrapper">
+                <label for="inputFile" class="custom-upload" id="labelUpload" style="border-color: rgb(203, 213, 225);">📁 Lampirkan file (opsional)</label>
+                <input type="file" id="inputFile" onchange="tampilkanNamaFile()">
+                
+                <button class="btn-tambah" onclick="prosesTugas()">Tambah</button>
+            </div>
+        </div>
+
+        <ul id="daftarTugas"></ul>
+        <p id="pesanKosong" class="kosong-teks" style="display: block;">Belum ada tugas hari ini.</p>
+    </div>
+
+    <!-- === LOGIKA JAVASCRIPT === -->
+    <script>
+        document.addEventListener("DOMContentLoaded", muatTugas);
+
+        const inputTugas = document.getElementById("inputTugas");
+        const inputFile = document.getElementById("inputFile");
+        const labelUpload = document.getElementById("labelUpload");
+        const daftarTugas = document.getElementById("daftarTugas");
+        const pesanKosong = document.getElementById("pesanKosong");
+
+        function tampilkanNamaFile() {
+            if (inputFile.files.length > 0) {
+                labelUpload.innerText = "📄 " + inputFile.files[0].name;
+                labelUpload.style.borderColor = "#4a90e2";
+            } else {
+                labelUpload.innerText = "📁 Lampirkan file (opsional)";
+                labelUpload.style.borderColor = "#cbd5e1";
+            }
+        }
+
+        // Memproses input teks dan membaca file jika ada lampiran
+        function prosesTugas() {
+            const teksTugas = inputTugas.value.trim();
+            
+            if (teksTugas === "") {
+                alert("Nama tugas tidak boleh kosong!");
+                return;
+            }
+
+            const file = inputFile.files[0]; // Memperbaiki pembacaan indeks file tunggal
+
+            // Validasi: Jika pengguna memilih file, baca isi filenya
+            if (file) {
+                const pembacaFile = new FileReader();
+                pembacaFile.onload = function(e) {
+                    const dataFileBase64 = e.target.result;
+                    eksekusiTambah(teksTugas, file.name, dataFileBase64);
+                };
+                pembacaFile.readAsDataURL(file);
+            } else {
+                // Jika tidak ada file, langsung tambahkan teks saja
+                eksekusiTambah(teksTugas, "", "");
+            }
+        }
+
+        function eksekusiTambah(teks, namaFile, dataFile) {
+            const idUnik = Date.now().toString(); // ID unik berbasis timestamp agar hapus data akurat
+            buatElemenTugas(idUnik, teks, namaFile, dataFile);
+            simpanKeLocalStorage(idUnik, teks, namaFile, dataFile);
+            
+            // Reset form input setelah ditambahkan
+            inputTugas.value = "";
+            inputFile.value = "";
+            tampilkanNamaFile();
+            perbaruiPesanKosong();
+        }
+
+        function buatElemenTugas(id, teks, namaFile, dataFile) {
+            const li = document.createElement("li");
+            li.setAttribute("data-id", id);
+
+            const divKonten = document.createElement("div");
+            divKonten.className = "tugas-konten";
+
+            // Menampilkan Nama Tugas
+            const spanTugas = document.createElement("span");
+            spanTugas.className = "tugas-teks";
+            spanTugas.innerText = teks;
+            divKonten.appendChild(spanTugas);
+
+            // Menampilkan Lampiran & Tombol Lihat File (Jika Ada)
+            if (namaFile && dataFile) {
+                const divLampiran = document.createElement("div");
+                divLampiran.className = "lampiran-wrapper";
+
+                const spanFile = document.createElement("span");
+                spanFile.className = "lampiran-teks";
+                spanFile.innerText = "📎 " + namaFile;
+
+                const linkLihat = document.createElement("a");
+                linkLihat.className = "btn-lihat";
+                linkLihat.innerText = "[Lihat Isi File]";
+                linkLihat.href = dataFile;
+                linkLihat.target = "_blank"; 
+
+                divLampiran.appendChild(spanFile);
+                divLampiran.appendChild(linkLihat);
+                divKonten.appendChild(divLampiran);
+            }
+
+            // Bagian Tombol Hapus Akurat Berdasarkan ID Unik
+            const divAksi = document.createElement("div");
+            divAksi.className = "aksi-wrapper";
+
+            const tombolHapus = document.createElement("button");
+            tombolHapus.className = "btn-hapus";
+            tombolHapus.innerText = "Hapus";
+            tombolHapus.onclick = function() {
+                li.remove();
+                hapusDariLocalStorage(id);
+                perbaruiPesanKosong();
+            };
+            divAksi.appendChild(tombolHapus);
+
+            li.appendChild(divKonten);
+            li.appendChild(divAksi);
+            daftarTugas.appendChild(li);
+        }
+
+        function perbaruiPesanKosong() {
+            if (daftarTugas.children.length === 0) {
+                pesanKosong.style.display = "block";
+            } else {
+                pesanKosong.style.display = "none";
+            }
+        }
+
+        function simpanKeLocalStorage(id, teks, namaFile, dataFile) {
+            let tugasLokal = localStorage.getItem("tugasAman") ? JSON.parse(localStorage.getItem("tugasAman")) : [];
+            tugasLokal.push({ id: id, teks: teks, namaFile: namaFile, dataFile: dataFile });
+            localStorage.setItem("tugasAman", JSON.stringify(tugasLokal));
+        }
+
+        function muatTugas() {
+            let tugasLokal = localStorage.getItem("tugasAman") ? JSON.parse(localStorage.getItem("tugasAman")) : [];
+            tugasLokal.forEach(item => buatElemenTugas(item.id, item.teks, item.namaFile, item.dataFile));
+            perbaruiPesanKosong();
+        }
+
+        function hapusDariLocalStorage(idHapus) {
+            let tugasLokal = localStorage.getItem("tugasAman") ? JSON.parse(localStorage.getItem("tugasAman")) : [];
+            // Menghapus data spesifik berdasarkan ID unik, bukan teks tugas
+            tugasLokal = tugasLokal.filter(item => item.id !== idHapus);
+            localStorage.setItem("tugasAman", JSON.stringify(tugasLokal));
+        }
+
+        inputTugas.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                prosesTugas();
+            }
+        });
+    </script>
+
+
+</body></html>
